@@ -5,7 +5,7 @@
 # Node building vars                                                                                               
 image_dir="/var/lib/libvirt/images"
 base_os_img="/var/lib/libvirt/images/iso/CentOS-7-x86_64-GenericCloud.qcow2"
-ssh_pub_key="~/.ssh/id_ed25519.pub"
+ssh_pub_key="/root/.ssh/id_ed25519.pub"
 
 # Network Vars
 dns_domain="gluster.lab"
