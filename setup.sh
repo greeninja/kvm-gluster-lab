@@ -149,6 +149,7 @@ check=$(virsh list --all | grep client01.$dns_domain > /dev/null && echo "0" || 
       --network network:gluster-lab \
       --graphics spice \
       --noautoconsole
+  fi
 
 # Print running VMs
 
