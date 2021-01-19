@@ -1,0 +1,83 @@
+---
+
+- name: Initial setup
+  gather_facts: false
+  hosts: gluster
+  tasks:
+    - name: Add gluster repo
+      package:
+        name: centos-release-gluster6
+        state: installed
+    - name: Install gluster
+      package:
+        name: glusterfs-server
+        state: installed
+    - name: Start and enable glusterd
+      service:
+        name: glusterd
+        state: started
+        enabled: true
+    - name: Create PVs
+      lvg:
+        vg: brick
+        pvs: /dev/vdb,/dev/vdc
+        state: present
+    - name: Check LV
+      command: lvdisplay 'brick/brick01'
+      no_log: True
+      changed_when: false
+      failed_when: false
+      register: lvdisplay
+    - name: Create LV
+      lvol:
+        vg: brick
+        lv: brick01
+        size: 100%FREE
+        state: present
+      when: lvdisplay.rc != 0 
+    - name: Create xfs filesystem on the brick
+      filesystem:
+        fstype: xfs
+        dev: /dev/brick/brick01
+    - name: Create persistent mount
+      mount:
+        src: /dev/brick/brick01
+        path: /brick/brick01
+        opts: rw,noatime,inode64,nouuid
+        fstype: xfs
+        state: mounted
+    - name: Add brick directory
+      file:
+        path: /brick/brick01/brick
+        recurse: no
+        state: directory
+
+- name: Setup gluster
+  gather_facts: false
+  hosts: gluster[0]
+  tasks:
+    - name: Probe the other nodes to be joined in the cluster
+      command: "gluster peer probe {{ item }}"
+      loop: "{{ groups['gluster'] }}"
+      when: item != inventory_hostname
+    - set_fact:
+        bricks: "{{ bricks | default([]) }} + [\"{{ item }}:/brick/brick01/brick\"]"
+      loop: "{{ groups['gluster'] }}"
+    - name: Check volume exists
+      command: gluster volume info volume01
+      no_log: True
+      changed_when: false
+      failed_when: false
+      register: vol
+    - name: Create volume
+      command: "gluster volume create volume01 replica {{ bricks | length }} {{ bricks | join (' ') }} force"
+      when: vol.rc != 0
+    - name: Check volume is started
+      command: gluster volume status volume01
+      no_log: True
+      changed_when: false
+      failed_when: false
+      register: volstart
+    - name: Start volume
+      command: gluster volume start volume01
+      when: volstart.rc != 0

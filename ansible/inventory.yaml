@@ -1,0 +1,18 @@
+---
+
+gluster:
+  hosts:
+    gluster01:
+      ansible_host: 10.44.50.100
+    gluster02:
+      ansible_host: 10.44.50.12
+
+gluster_extended:
+  hosts:
+    gluster03:
+      ansible_host: 10.44.50.77
+
+gluster_client:
+  hosts:
+    client01:
+      ansible_host: 10.44.50.10
