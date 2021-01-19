@@ -1,0 +1,53 @@
+---
+
+- name: Initial setup
+  gather_facts: false
+  hosts: gluster_extended
+  tasks:
+    - name: Add gluster repo
+      package:
+        name: centos-release-gluster6
+        state: installed
+    - name: Install gluster
+      package:
+        name: glusterfs-server
+        state: installed
+    - name: Start and enable glusterd
+      service:
+        name: glusterd
+        state: started
+        enabled: true
+    - name: Create PVs
+      lvg:
+        vg: brick
+        pvs: /dev/vdb,/dev/vdc
+        state: present
+    - name: Check LV
+      command: lvdisplay 'brick/brick01'
+      no_log: True
+      changed_when: false
+      failed_when: false
+      register: lvdisplay
+    - name: Create LV
+      lvol:
+        vg: brick
+        lv: brick01
+        size: 100%FREE
+        state: present
+      when: lvdisplay.rc != 0 
+    - name: Create xfs filesystem on the brick
+      filesystem:
+        fstype: xfs
+        dev: /dev/brick/brick01
+    - name: Create persistent mount
+      mount:
+        src: /dev/brick/brick01
+        path: /brick/brick01
+        opts: rw,noatime,inode64,nouuid
+        fstype: xfs
+        state: mounted
+    - name: Add brick directory
+      file:
+        path: /brick/brick01/brick
+        recurse: no
+        state: directory
